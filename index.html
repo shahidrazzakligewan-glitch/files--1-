@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calorie Count — Food Nutrition Finder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍊</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="masthead__inner">
+      <div class="masthead__topbar">
+        <p class="masthead__kicker">field notes on everyday food</p>
+        <div class="masthead__topbar-actions">
+          <a class="top-link" href="login.html">Login</a>
+          <a class="top-link top-link--secondary" href="signup.html">Sign Up</a>
+          <span id="auth-user-chip" class="user-chip hidden"></span>
+          <button id="logout-button" class="logout-button hidden" type="button">Logout</button>
+        </div>
+      </div>
+      <h1 class="masthead__title">Calorie Count</h1>
+      <p class="masthead__tagline">Look up a fruit, vegetable, dry fruit, meat, snack, or fast food order, and read what's actually in it — calories, sugar, fiber, protein — per 100g and per serving.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="searchbar-wrap">
+      <form id="search-form" class="searchbar" role="search" autocomplete="off">
+        <input
+          id="search-input"
+          type="text"
+          name="q"
+          placeholder="Search any food — try “mango”, “almond”, or “pizza”"
+          aria-label="Search food"
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      <nav class="filters" id="filters" aria-label="Filter by food type">
+        <button class="filter-tab is-active" data-type="all">All food</button>
+        <!-- type tabs injected here -->
+      </nav>
+    </section>
+
+    <section class="results">
+      <p class="results__meta" id="results-meta"></p>
+      <div class="grid" id="fruit-grid"></div>
+      <p class="empty-state" id="empty-state" hidden>
+        No fruit matches that search. Try a different name, or clear the filter above.
+      </p>
+    </section>
+
+    <section class="contact">
+      <div class="contact__inner">
+        <h2 class="contact__title">Get in touch</h2>
+        <p class="contact__lede">Found an incorrect number, or want a food added to the list? Send a note.</p>
+
+        <form id="contact-form" class="contact__form" novalidate>
+          <label>
+            Name
+            <input type="text" id="contact-name" name="name" required />
+          </label>
+          <label>
+            Email
+            <input type="email" id="contact-email" name="email" required />
+          </label>
+          <label>
+            Message
+            <textarea id="contact-message" name="message" rows="4" required></textarea>
+          </label>
+          <button type="submit">Send message</button>
+          <p class="contact__status" id="contact-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Nutrition values are approximate, per 100g of raw edible fruit unless noted. Not a substitute for lab-tested nutrition data.</p>
+  </footer>
+
+  <!-- Detail drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <button class="drawer__close" id="drawer-close" aria-label="Close">×</button>
+    <div id="drawer-content"><!-- injected --></div>
+  </aside>
+
+  <script src="script.js"></script>
+</body>
+</html>

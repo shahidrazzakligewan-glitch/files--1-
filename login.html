@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calorie Count — Login</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍊</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="auth-page">
+    <div class="auth-shell">
+      <div class="auth-card">
+        <div class="auth-toggle" aria-label="Authentication mode selector">
+          <button class="auth-tab is-active" type="button" data-mode="signin">Sign In</button>
+          <button class="auth-tab" type="button" data-mode="signup">Sign Up</button>
+        </div>
+
+        <div class="auth-panel is-visible" data-panel="signin">
+          <div class="auth-header">
+            <div class="brand-badge">🍊</div>
+            <p class="eyebrow">Welcome back</p>
+            <h1>Sign in to Calorie Count</h1>
+          </div>
+
+          <form id="login-form" class="auth-form" novalidate>
+            <label>
+              Email address
+              <input type="email" name="email" placeholder="you@example.com" required />
+            </label>
+
+            <label>
+              Password
+              <input type="password" name="password" placeholder="Enter your password" required />
+            </label>
+
+            <div class="auth-actions">
+              <label class="remember-me">
+                <input type="checkbox" name="remember" />
+                <span>Remember me</span>
+              </label>
+              <a href="#">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="primary-button">Log in</button>
+          </form>
+        </div>
+
+        <div class="auth-panel" data-panel="signup">
+          <div class="auth-header">
+            <div class="brand-badge">✨</div>
+            <p class="eyebrow">Create account</p>
+            <h1>Join Calorie Count</h1>
+          </div>
+
+          <form id="signup-form" class="auth-form" novalidate>
+            <div class="two-col">
+              <label>
+                First name
+                <input type="text" name="firstName" placeholder="John" required />
+              </label>
+              <label>
+                Last name
+                <input type="text" name="lastName" placeholder="Doe" required />
+              </label>
+            </div>
+
+            <label>
+              Email address
+              <input type="email" name="email" placeholder="you@example.com" required />
+            </label>
+
+            <label>
+              Phone number
+              <input type="tel" name="phone" placeholder="+1 (555) 123-4567" required />
+            </label>
+
+            <label>
+              Password
+              <input type="password" name="password" placeholder="Create a strong password" required />
+            </label>
+
+            <label>
+              Confirm password
+              <input type="password" name="confirmPassword" placeholder="Repeat your password" required />
+            </label>
+
+            <label>
+              Health goal
+              <select name="goal">
+                <option value="weight-loss">Weight loss</option>
+                <option value="muscle-gain">Muscle gain</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="healthy-eating">Healthy eating</option>
+              </select>
+            </label>
+
+            <label class="checkbox-inline">
+              <input type="checkbox" name="terms" required />
+              <span>I agree to the terms and privacy policy.</span>
+            </label>
+
+            <button type="submit" class="primary-button">Create account</button>
+          </form>
+        </div>
+
+        <div class="auth-divider"><span>or continue with</span></div>
+
+        <div class="social-row">
+          <button type="button" class="social-button" data-provider="Google">Google</button>
+          <button type="button" class="social-button" data-provider="Apple">Apple</button>
+        </div>
+
+        <p class="auth-message" id="auth-message" aria-live="polite"></p>
+
+        <p class="auth-footer">
+          <span data-signin-text>New here?</span>
+          <span data-signup-text>Already have an account?</span>
+          <a href="signup.html">Create an account</a>
+        </p>
+      </div>
+
+      <div class="auth-visual" aria-hidden="true">
+        <div class="auth-visual__panel">
+          <p class="auth-visual__label">Today’s focus</p>
+          <h2>Balanced eating made simple</h2>
+          <ul>
+            <li>Search by food, type, or category</li>
+            <li>Track calories, protein, and fiber</li>
+            <li>Build better decisions from real data</li>
+          </ul>
+          <div class="mini-stat">
+            <span>Avg. calorie load</span>
+            <strong>180 kcal / 100g</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
