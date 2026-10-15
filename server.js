@@ -6,25 +6,50 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { randomBytes, scryptSync, timingSafeEqual } = require("node:crypto");
-const { DatabaseSync } = require("node:sqlite");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const USER_DATA_PATH = path.join(__dirname, "user-data.json");
 
-const db = new DatabaseSync(path.join(__dirname, "users.db"));
+function nextRecordId(records) {
+  return records.reduce((maximum, record) => Math.max(maximum, Number(record.id) || 0), 0) + 1;
+}
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    firstName TEXT NOT NULL,
-    lastName TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    phone TEXT NOT NULL,
-    password TEXT NOT NULL,
-    goal TEXT,
-    createdAt TEXT NOT NULL
-  );
-`);
+function loadUserData() {
+  if (!fs.existsSync(USER_DATA_PATH)) {
+    const emptyData = {
+      users: [],
+      contactMessages: [],
+      nextUserId: 1,
+      nextContactMessageId: 1,
+    };
+    fs.writeFileSync(USER_DATA_PATH, `${JSON.stringify(emptyData, null, 2)}\n`, { flag: "wx" });
+    return emptyData;
+  }
+
+  const data = JSON.parse(fs.readFileSync(USER_DATA_PATH, "utf-8"));
+  if (!data || !Array.isArray(data.users) || !Array.isArray(data.contactMessages)) {
+    throw new Error("user-data.json must contain users and contactMessages arrays.");
+  }
+
+  return {
+    users: data.users,
+    contactMessages: data.contactMessages,
+    nextUserId: Math.max(Number(data.nextUserId) || 1, nextRecordId(data.users)),
+    nextContactMessageId: Math.max(
+      Number(data.nextContactMessageId) || 1,
+      nextRecordId(data.contactMessages)
+    ),
+  };
+}
+
+let userData = loadUserData();
+
+function saveUserData() {
+  const temporaryPath = `${USER_DATA_PATH}.tmp`;
+  fs.writeFileSync(temporaryPath, `${JSON.stringify(userData, null, 2)}\n`);
+  fs.renameSync(temporaryPath, USER_DATA_PATH);
+}
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -92,6 +117,17 @@ loadFoods();
 
 // ---- Middleware ----
 app.use(express.json());
+app.use(
+  [
+    "/user-data.json",
+    "/user-data.json.tmp",
+    "/users.db",
+    "/users.db-journal",
+    "/users.db-shm",
+    "/users.db-wal",
+  ],
+  (req, res) => res.sendStatus(404)
+);
 app.use(express.static(__dirname));
 
 // ---- API routes ----
@@ -164,7 +200,7 @@ app.get("/api/categories", (req, res) => {
   res.json({ categories });
 });
 
-// POST /api/auth/register -> create a new user record in SQLite
+// POST /api/auth/register -> create a new user record in user-data.json
 app.post("/api/auth/register", (req, res) => {
   const { firstName, lastName, email, phone, password, goal } = req.body || {};
 
@@ -189,33 +225,35 @@ app.post("/api/auth/register", (req, res) => {
     });
   }
 
-  const existing = db
-    .prepare("SELECT id FROM users WHERE email = ?")
-    .get(cleanEmail);
+  const existing = userData.users.some((user) => user.email === cleanEmail);
 
   if (existing) {
     return res.status(409).json({ error: "This email is already registered." });
   }
 
-  const insert = db.prepare(`
-    INSERT INTO users (firstName, lastName, email, phone, password, goal, createdAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
   const createdAt = new Date().toISOString();
-  const result = insert.run(
-    String(firstName).trim(),
-    String(lastName).trim(),
-    cleanEmail,
-    cleanPhone,
-    hashPassword(password),
-    String(goal || "healthy-eating"),
-    createdAt
-  );
+  const user = {
+    id: userData.nextUserId,
+    firstName: String(firstName).trim(),
+    lastName: String(lastName).trim(),
+    email: cleanEmail,
+    phone: cleanPhone,
+    password: hashPassword(password),
+    goal: String(goal || "healthy-eating"),
+    createdAt,
+  };
 
-  const user = db
-    .prepare("SELECT id, firstName, lastName, email, phone, goal, createdAt FROM users WHERE id = ?")
-    .get(result.lastInsertRowid);
+  userData.users.push(user);
+  userData.nextUserId += 1;
+
+  try {
+    saveUserData();
+  } catch (error) {
+    userData.users.pop();
+    userData.nextUserId = user.id;
+    console.error("Could not save new account:", error);
+    return res.status(500).json({ error: "Could not save your account right now. Please try again." });
+  }
 
   return res.status(201).json({
     ok: true,
@@ -224,7 +262,7 @@ app.post("/api/auth/register", (req, res) => {
   });
 });
 
-// POST /api/auth/login -> validate user against the backend database
+// POST /api/auth/login -> validate a user stored in user-data.json
 app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
   const cleanEmail = normalizeEmail(email);
@@ -233,9 +271,7 @@ app.post("/api/auth/login", (req, res) => {
     return res.status(400).json({ error: "Email and password are required." });
   }
 
-  const user = db
-    .prepare("SELECT * FROM users WHERE email = ?")
-    .get(cleanEmail);
+  const user = userData.users.find((record) => record.email === cleanEmail);
 
   if (!user) {
     return res.status(401).json({ error: "No account matches this email." });
@@ -247,10 +283,15 @@ app.post("/api/auth/login", (req, res) => {
   }
 
   if (passwordCheck.needsRehash) {
-    db.prepare("UPDATE users SET password = ? WHERE id = ?").run(
-      hashPassword(password),
-      user.id
-    );
+    const previousPassword = user.password;
+    user.password = hashPassword(password);
+    try {
+      saveUserData();
+    } catch (error) {
+      user.password = previousPassword;
+      console.error("Could not update account password:", error);
+      return res.status(500).json({ error: "Could not sign in right now. Please try again." });
+    }
   }
 
   return res.status(200).json({
@@ -260,28 +301,53 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
-// POST /api/contact -> accepts a contact form submission
-// There is no email service wired up here; submissions are logged server-side
-// so the route is easy to swap for a real mailer or database later.
+// POST /api/contact -> validate and save contact form submissions in user-data.json
 app.post("/api/contact", (req, res) => {
   const { name, email, message } = req.body || {};
+  const cleanName = String(name || "").trim();
+  const cleanEmail = normalizeEmail(email);
+  const cleanMessage = String(message || "").trim();
 
-  if (!name || !email || !message) {
+  if (!cleanName || !cleanEmail || !cleanMessage) {
     return res.status(400).json({ error: "Name, email, and message are all required." });
   }
+
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(email)) {
+  if (!emailPattern.test(cleanEmail)) {
     return res.status(400).json({ error: "Please provide a valid email address." });
   }
 
-  console.log("New contact form submission:", {
-    name,
-    email,
-    message,
-    receivedAt: new Date().toISOString(),
-  });
+  if (cleanName.length > 100 || cleanEmail.length > 254 || cleanMessage.length > 5000) {
+    return res.status(400).json({ error: "Please keep the name, email, and message within the allowed length." });
+  }
 
-  res.status(200).json({ ok: true, message: "Thanks — your message has been received." });
+  const createdAt = new Date().toISOString();
+  const contactMessage = {
+    id: userData.nextContactMessageId,
+    name: cleanName,
+    email: cleanEmail,
+    message: cleanMessage,
+    createdAt,
+  };
+
+  try {
+    userData.contactMessages.push(contactMessage);
+    userData.nextContactMessageId += 1;
+    saveUserData();
+
+    return res.status(201).json({
+      ok: true,
+      message: "Thanks — your message has been saved.",
+      createdAt,
+    });
+  } catch (error) {
+    if (userData.contactMessages.at(-1) === contactMessage) {
+      userData.contactMessages.pop();
+      userData.nextContactMessageId = contactMessage.id;
+    }
+    console.error("Could not save contact form submission:", error);
+    return res.status(500).json({ error: "Could not save your message right now. Please try again." });
+  }
 });
 
 app.use("/api", (req, res) => {

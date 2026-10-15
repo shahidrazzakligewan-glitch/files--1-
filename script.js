@@ -63,6 +63,28 @@ function initFoodApp() {
   if (contactForm) {
     contactForm.addEventListener("submit", handleContactSubmit);
   }
+
+  initContactReveal();
+}
+
+function initContactReveal() {
+  const revealItems = document.querySelectorAll("[data-reveal]");
+
+  if (!("IntersectionObserver" in window)) {
+    revealItems.forEach((item) => item.classList.add("is-visible"));
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.18 });
+
+  revealItems.forEach((item) => observer.observe(item));
 }
 
 function initAuthFlow() {
@@ -109,8 +131,37 @@ function initHeaderAuth() {
 
 const AUTH_USERS_KEY = "calorieCountUsers";
 const CURRENT_USER_KEY = "calorieCountCurrentUser";
+const THEME_STORAGE_KEY = "calorieCountTheme";
 
+initTheme();
 initHeaderAuth();
+
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const theme = savedTheme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
+
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    button.setAttribute("aria-label", `Switch to ${nextTheme} theme`);
+    button.setAttribute("aria-pressed", String(theme === "dark"));
+    button.querySelector(".theme-toggle__icon").textContent = theme === "dark" ? "☀" : "☾";
+    button.querySelector(".theme-toggle__label").textContent = theme === "dark" ? "Light" : "Dark";
+
+    button.addEventListener("click", () => {
+      const updatedTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      localStorage.setItem(THEME_STORAGE_KEY, updatedTheme);
+      document.documentElement.dataset.theme = updatedTheme;
+      document.querySelectorAll("[data-theme-toggle]").forEach((toggle) => {
+        const toggleNextTheme = updatedTheme === "dark" ? "light" : "dark";
+        toggle.setAttribute("aria-label", `Switch to ${toggleNextTheme} theme`);
+        toggle.setAttribute("aria-pressed", String(updatedTheme === "dark"));
+        toggle.querySelector(".theme-toggle__icon").textContent = updatedTheme === "dark" ? "☀" : "☾";
+        toggle.querySelector(".theme-toggle__label").textContent = updatedTheme === "dark" ? "Light" : "Dark";
+      });
+    });
+  });
+}
 
 function getStoredUsers() {
   try {
