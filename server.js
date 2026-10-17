@@ -10,6 +10,8 @@ const { randomBytes, scryptSync, timingSafeEqual } = require("node:crypto");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const USER_DATA_PATH = path.join(__dirname, "user-data.json");
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@caloriecount.local";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123";
 
 function nextRecordId(records) {
   return records.reduce((maximum, record) => Math.max(maximum, Number(record.id) || 0), 0) + 1;
@@ -106,6 +108,10 @@ function createUserRecord(user) {
 const DATA_PATH = path.join(__dirname, "foods.json");
 const LEGACY_DATA_PATH = path.join(__dirname, "data", "foods.json");
 let foods = [];
+
+function persistFoods() {
+  fs.writeFileSync(DATA_PATH, `${JSON.stringify(foods, null, 2)}\n`);
+}
 
 function loadFoods() {
   const dataFile = fs.existsSync(DATA_PATH) ? DATA_PATH : LEGACY_DATA_PATH;
@@ -348,6 +354,99 @@ app.post("/api/contact", (req, res) => {
     console.error("Could not save contact form submission:", error);
     return res.status(500).json({ error: "Could not save your message right now. Please try again." });
   }
+});
+
+app.post("/api/admin/login", (req, res) => {
+  const { email, password } = req.body || {};
+  const cleanEmail = normalizeEmail(email);
+  const cleanPassword = String(password || "");
+
+  if (!cleanEmail || !cleanPassword) {
+    return res.status(400).json({ error: "Admin email and password are required." });
+  }
+
+  if (cleanEmail !== normalizeEmail(ADMIN_EMAIL) || cleanPassword !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Invalid admin credentials." });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    message: "Admin login successful.",
+    admin: {
+      email: ADMIN_EMAIL,
+      role: "admin",
+    },
+  });
+});
+
+app.get("/api/admin/summary", (req, res) => {
+  const summary = {
+    totalFoods: foods.length,
+    totalMessages: userData.contactMessages.length,
+    totalUsers: userData.users.length,
+    adminEmail: ADMIN_EMAIL,
+    lastUpdated: new Date().toISOString(),
+  };
+  res.json(summary);
+});
+
+app.get("/api/admin/contact-messages", (req, res) => {
+  const messages = [...userData.contactMessages].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+  res.json({ count: messages.length, messages });
+});
+
+app.post("/api/admin/foods", (req, res) => {
+  const food = req.body || {};
+  const name = String(food.name || "").trim();
+  const type = String(food.type || "").trim().toLowerCase();
+  const category = String(food.category || "").trim().toLowerCase();
+  const caloriesPer100g = Number(food.caloriesPer100g ?? 0);
+
+  if (!name || !type || !category || !Number.isFinite(caloriesPer100g)) {
+    return res.status(400).json({
+      error: "Name, type, category, and caloriesPer100g are required.",
+    });
+  }
+
+  const normalizedId = String(food.id || name).trim().toLowerCase().replace(/\s+/g, "-");
+  const existingFood = foods.find((item) => item.id.toLowerCase() === normalizedId.toLowerCase());
+
+  if (existingFood) {
+    return res.status(409).json({ error: "A food with this id already exists." });
+  }
+
+  const newFood = {
+    id: normalizedId,
+    type,
+    name,
+    category,
+    emoji: String(food.emoji || "🍽️").trim() || "🍽️",
+    color: String(food.color || "#E2790C").trim() || "#E2790C",
+    caloriesPer100g,
+    servingSize: String(food.servingSize || "1 serving").trim(),
+    caloriesPerServing: Number(food.caloriesPerServing ?? caloriesPer100g),
+    protein: Number(food.protein ?? 0),
+    carbs: Number(food.carbs ?? 0),
+    fat: Number(food.fat ?? 0),
+    fiber: Number(food.fiber ?? 0),
+    sugar: Number(food.sugar ?? 0),
+    vitaminC: Number(food.vitaminC ?? 0),
+    potassium: Number(food.potassium ?? 0),
+    water: Number(food.water ?? 0),
+    description: String(food.description || "").trim() || "Freshly added by the admin team.",
+    benefits: Array.isArray(food.benefits) ? food.benefits.map((item) => String(item).trim()).filter(Boolean) : [],
+  };
+
+  foods.push(newFood);
+  persistFoods();
+
+  return res.status(201).json({
+    ok: true,
+    message: "Food added successfully.",
+    food: newFood,
+  });
 });
 
 app.use("/api", (req, res) => {

@@ -2198,5 +2198,29 @@
       "Very little fiber, vitamins, or minerals",
       "Best treated as an occasional treat"
     ]
+  },
+  {
+    "id": "dragon-fruit",
+    "type": "fruit",
+    "name": "Dragon Fruit",
+    "category": "tropical",
+    "emoji": "🐉",
+    "color": "#5EA77A",
+    "caloriesPer100g": 60,
+    "servingSize": "1 serving",
+    "caloriesPerServing": 60,
+    "protein": 1.8,
+    "carbs": 13,
+    "fat": 0.5,
+    "fiber": 3,
+    "sugar": 9,
+    "vitaminC": 30,
+    "potassium": 250,
+    "water": 82,
+    "description": "A vivid tropical fruit with a sweet texture and vibrant skin.",
+    "benefits": [
+      "Hydrating",
+      "rich in fiber"
+    ]
   }
 ]

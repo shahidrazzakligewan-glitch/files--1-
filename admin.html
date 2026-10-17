@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calorie Count — Admin Panel</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍊</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f4efe8;
+        --bg-strong: #e9f2f1;
+        --bg-soft: rgba(255, 255, 255, 0.35);
+        --panel: rgba(255, 255, 255, 0.6);
+        --panel-strong: rgba(255, 255, 255, 0.82);
+        --ink: #1a2332;
+        --muted: #596776;
+        --line: rgba(109, 122, 136, 0.2);
+        --brand: #ff8f1f;
+        --brand-dark: #e36b00;
+        --brand-soft: rgba(255, 162, 76, 0.14);
+        --brand-strong: #7c3aed;
+        --success: #1aa97b;
+        --error: #e35d5d;
+        --shadow: rgba(18, 28, 37, 0.14);
+        --sidebar: rgba(18, 28, 38, 0.96);
+        --sidebar-soft: rgba(255, 255, 255, 0.08);
+        --field: rgba(255, 255, 255, 0.72);
+        --card-highlight: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
+      }
+
+      body[data-theme="dark"] {
+        --bg: #091522;
+        --bg-strong: #121f33;
+        --bg-soft: rgba(17, 23, 32, 0.4);
+        --panel: rgba(15, 23, 32, 0.7);
+        --panel-strong: rgba(21, 30, 40, 0.88);
+        --ink: #ebf3ff;
+        --muted: #afc0d5;
+        --line: rgba(157, 176, 205, 0.18);
+        --brand: #ffb357;
+        --brand-dark: #ff8a2d;
+        --brand-soft: rgba(255, 179, 87, 0.15);
+        --brand-strong: #a78bfa;
+        --success: #4fe4ae;
+        --error: #ff8e8e;
+        --shadow: rgba(2, 6, 12, 0.55);
+        --sidebar: rgba(9, 15, 24, 0.97);
+        --sidebar-soft: rgba(255, 255, 255, 0.06);
+        --field: rgba(13, 19, 28, 0.8);
+        --card-highlight: linear-gradient(135deg, rgba(28, 39, 51, 0.95), rgba(18, 28, 35, 0.72));
+      }
+
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Work Sans", sans-serif;
+        background: radial-gradient(circle at top left, rgba(255,146,51,0.12), transparent 26%),
+          radial-gradient(circle at bottom right, rgba(124,58,237,0.12), transparent 22%),
+          linear-gradient(135deg, var(--bg) 0%, var(--bg-strong) 100%);
+        color: var(--ink);
+      }
+      body {
+        min-height: 100vh;
+        transition: background 0.3s ease, color 0.3s ease;
+      }
+      a { color: inherit; text-decoration: none; }
+      button, input, select, textarea { font: inherit; }
+      .admin-shell {
+        position: relative;
+        display: flex;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      .admin-shell::before,
+      .admin-shell::after {
+        content: "";
+        position: absolute;
+        width: 34rem;
+        height: 34rem;
+        border-radius: 50%;
+        filter: blur(52px);
+        opacity: 0.7;
+        pointer-events: none;
+        animation: floatOrb 18s ease-in-out infinite alternate;
+      }
+      .admin-shell::before {
+        top: -8rem;
+        left: -7rem;
+        background: rgba(255, 150, 68, 0.24);
+      }
+      .admin-shell::after {
+        right: -7rem;
+        bottom: -10rem;
+        background: rgba(124, 58, 237, 0.2);
+        animation-delay: 2.6s;
+      }
+      @keyframes floatOrb {
+        0% { transform: translate3d(0, 0, 0) scale(1); }
+        100% { transform: translate3d(34px, -28px, 0) scale(1.08); }
+      }
+      .admin-sidebar {
+        position: relative;
+        z-index: 1;
+        width: 290px;
+        background: linear-gradient(180deg, rgba(15, 22, 32, 0.96), rgba(18, 28, 39, 0.92));
+        color: #f4f7f8;
+        padding: 28px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        border-right: 1px solid rgba(255,255,255,0.07);
+        box-shadow: inset -1px 0 0 rgba(255,255,255,0.04);
+      }
+      .brand-block { display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 700; }
+      .brand-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #fddc9d, #ff9d2b);
+        color: #1d222b;
+        font-size: 1.4rem;
+        box-shadow: 0 10px 22px rgba(255, 151, 53, 0.45);
+      }
+      .sidebar-nav { display: grid; gap: 10px; }
+      .sidebar-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: var(--sidebar-soft);
+        color: rgba(255,255,255,0.9);
+        border: 1px solid rgba(255,255,255,0.04);
+        transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease;
+      }
+      .sidebar-link:hover {
+        transform: translateX(2px);
+        background: rgba(255,255,255,0.09);
+        border-color: rgba(255,255,255,0.12);
+      }
+      .sidebar-link span:last-child { opacity: 0.8; }
+      .admin-main {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        padding: 28px;
+      }
+      .content-card {
+        background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,0.46);
+        border-radius: 28px;
+        box-shadow: 0 18px 48px var(--shadow);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border 0.2s ease;
+      }
+      .content-card:hover { transform: translateY(-2px); }
+      .login-screen {
+        display: grid;
+        place-items: center;
+        min-height: calc(100vh - 56px);
+      }
+      .login-card {
+        width: min(100%, 520px);
+        padding: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+      .login-card::before {
+        content: "";
+        position: absolute;
+        inset: -30% 28% auto auto;
+        width: 16rem;
+        height: 16rem;
+        background: radial-gradient(circle, rgba(255, 166, 90, 0.3), transparent 60%);
+        pointer-events: none;
+      }
+      .eyebrow {
+        display: inline-block;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: var(--brand-soft);
+        color: var(--brand-dark);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+      }
+      .login-card h1 {
+        margin: 16px 0 10px;
+        font-family: "Fraunces", serif;
+        font-size: clamp(2rem, 3vw, 2.7rem);
+      }
+      .login-card p { color: var(--muted); margin-top: 0; }
+      .login-hint {
+        margin: 10px 0 0;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(255, 179, 87, 0.12), rgba(124,58,237,0.08));
+        color: var(--brand-dark);
+        font-weight: 700;
+        font-size: 0.88rem;
+        border: 1px solid rgba(255, 166, 90, 0.18);
+      }
+      .admin-form { display: grid; gap: 16px; margin-top: 22px; }
+      .admin-form label { display: grid; gap: 8px; color: var(--ink); font-weight: 600; }
+      .admin-form input, .admin-form textarea, .admin-form select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: var(--field);
+        color: var(--ink);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+      .admin-form input:focus, .admin-form textarea:focus, .admin-form select:focus {
+        outline: none;
+        border-color: rgba(255, 142, 0, 0.6);
+        box-shadow: 0 0 0 4px rgba(255, 142, 0, 0.12);
+      }
+      .primary-button,
+      .soft-button,
+      .theme-toggle {
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+      }
+      .primary-button:hover,
+      .soft-button:hover,
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.02);
+      }
+      .primary-button {
+        border: 0;
+        border-radius: 14px;
+        padding: 13px 16px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-dark), var(--brand-strong));
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 12px 22px rgba(255, 121, 25, 0.24);
+      }
+      .theme-toggle {
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.06);
+        color: var(--ink);
+        border-radius: 12px;
+        padding: 9px 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      .status {
+        min-height: 24px;
+        font-size: 0.96rem;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+      .status.is-success { color: var(--success); }
+      .status.is-error { color: var(--error); }
+      .hidden { display: none !important; }
+
+      .dashboard {
+        display: grid;
+        gap: 22px;
+      }
+      .dashboard-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px;
+      }
+      .dashboard-header h2 {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-size: clamp(2rem, 2.5vw, 2.6rem);
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .soft-button {
+        border: 1px solid var(--line);
+        background: var(--card-highlight);
+        color: var(--ink);
+        border-radius: 12px;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(170px, 1fr));
+        gap: 18px;
+      }
+      .stat-card {
+        position: relative;
+        overflow: hidden;
+        padding: 20px;
+        border-radius: 22px;
+        background: var(--card-highlight);
+        border: 1px solid var(--line);
+        box-shadow: inset 0 1px rgba(255,255,255,0.1);
+      }
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        inset: -40% auto auto -30%;
+        width: 12rem;
+        height: 12rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 163, 77, 0.2), transparent 63%);
+      }
+      .stat-card .label {
+        position: relative;
+        z-index: 1;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .stat-card .value {
+        position: relative;
+        z-index: 1;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-top: 10px;
+      }
+      .panel-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1.4fr;
+        gap: 22px;
+      }
+      .panel {
+        padding: 22px;
+      }
+      .panel h3 {
+        margin: 0 0 18px;
+        font-size: 1.3rem;
+      }
+      .food-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .food-form .full {
+        grid-column: 1 / -1;
+      }
+      .food-form label {
+        display: grid;
+        gap: 7px;
+        font-weight: 600;
+      }
+      .food-form textarea {
+        min-height: 84px;
+        resize: vertical;
+      }
+      .contact-list {
+        display: grid;
+        gap: 12px;
+      }
+      .message-card {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+        animation: fadeInUp 0.35s ease;
+      }
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .message-card header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .message-card strong { font-size: 1.04rem; }
+      .message-card .meta { color: var(--muted); font-size: 0.8rem; }
+      .message-card p { margin: 0; color: var(--ink); line-height: 1.6; }
+      .empty-note {
+        padding: 18px;
+        border: 1px dashed var(--line);
+        border-radius: 12px;
+        color: var(--muted);
+        background: rgba(255,255,255,0.03);
+      }
+
+      @media (max-width: 980px) {
+        .admin-shell { display: block; }
+        .admin-sidebar { width: 100%; }
+        .stats-grid, .panel-grid, .food-form { grid-template-columns: 1fr; }
+        .dashboard-header { flex-direction: column; align-items: flex-start; }
+        .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="brand-block">
+          <div class="brand-badge">🍊</div>
+          <div>Calorie Count</div>
+        </div>
+
+        <div class="sidebar-nav">
+          <a class="sidebar-link" href="index.html"><span>Public site</span><span>→</span></a>
+          <a class="sidebar-link" href="admin.html"><span>Dashboard</span><span>◎</span></a>
+          <button class="theme-toggle" type="button" data-admin-theme-toggle aria-label="Toggle dark mode">
+            <span class="theme-icon" aria-hidden="true">☾</span>
+            <span class="theme-label">Dark</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <section id="admin-login-screen" class="login-screen">
+          <div class="login-card content-card">
+            <span class="eyebrow">Admin access</span>
+            <h1>Manage food entries</h1>
+            <p>Sign in to add new nutrition data and review contact submissions.</p>
+            <p class="login-hint">Default demo login: admin@caloriecount.local / Admin@123</p>
+
+            <form id="admin-login-form" class="admin-form" novalidate>
+              <label>
+                Email
+                <input type="email" name="email" placeholder="admin@caloriecount.local" required />
+              </label>
+
+              <label>
+                Password
+                <input type="password" name="password" placeholder="Enter admin password" required />
+              </label>
+
+              <button class="primary-button" type="submit">Sign in to dashboard</button>
+            </form>
+
+            <div id="admin-status" class="status" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section id="admin-dashboard" class="dashboard hidden">
+          <header class="dashboard-header content-card">
+            <div>
+              <span class="eyebrow">Overview</span>
+              <h2>Admin dashboard</h2>
+            </div>
+            <div class="header-actions">
+              <button class="theme-toggle" type="button" data-admin-theme-toggle aria-label="Toggle dark mode">
+                <span class="theme-icon" aria-hidden="true">☾</span>
+                <span class="theme-label">Dark</span>
+              </button>
+              <span id="admin-email" class="soft-button"></span>
+              <button id="admin-logout" class="soft-button" type="button">Logout</button>
+            </div>
+          </header>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="label">Foods</div>
+              <div id="stat-foods" class="value">0</div>
+            </article>
+            <article class="stat-card">
+              <div class="label">Messages</div>
+              <div id="stat-messages" class="value">0</div>
+            </article>
+            <article class="stat-card">
+              <div class="label">Users</div>
+              <div id="stat-users" class="value">0</div>
+            </article>
+            <article class="stat-card">
+              <div class="label">Store</div>
+              <div id="stat-updated" class="value" style="font-size: 1rem; line-height: 1.4;">—</div>
+            </article>
+          </div>
+
+          <div class="panel-grid">
+            <section class="panel content-card">
+              <h3>Add food item</h3>
+              <form id="food-form" class="food-form" novalidate>
+                <label>
+                  Food name
+                  <input type="text" name="name" placeholder="Dragon fruit" required />
+                </label>
+                <label>
+                  ID
+                  <input type="text" name="id" placeholder="dragon-fruit" />
+                </label>
+                <label>
+                  Type
+                  <select name="type" required>
+                    <option value="fruit">Fruit</option>
+                    <option value="vegetable">Vegetable</option>
+                    <option value="dryfruit">Dry fruit</option>
+                    <option value="meat">Meat</option>
+                    <option value="snack">Snack</option>
+                    <option value="fastfood">Fast food</option>
+                  </select>
+                </label>
+                <label>
+                  Category
+                  <input type="text" name="category" placeholder="tropical" required />
+                </label>
+                <label>
+                  Emoji
+                  <input type="text" name="emoji" value="🍽️" />
+                </label>
+                <label>
+                  Color
+                  <input type="text" name="color" value="#E2790C" />
+                </label>
+                <label>
+                  Calories / 100g
+                  <input type="number" name="caloriesPer100g" min="0" step="0.1" required />
+                </label>
+                <label>
+                  Protein (g)
+                  <input type="number" name="protein" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Carbs (g)
+                  <input type="number" name="carbs" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Fat (g)
+                  <input type="number" name="fat" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Fiber (g)
+                  <input type="number" name="fiber" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Sugar (g)
+                  <input type="number" name="sugar" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Vitamin C (mg)
+                  <input type="number" name="vitaminC" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Potassium (mg)
+                  <input type="number" name="potassium" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                  Water (%)
+                  <input type="number" name="water" min="0" max="100" step="0.1" value="0" />
+                </label>
+                <label class="full">
+                  Description
+                  <textarea name="description" placeholder="Short summary for the food detail drawer..."></textarea>
+                </label>
+                <label class="full">
+                  Benefits (comma separated)
+                  <input type="text" name="benefits" placeholder="Rich in fiber, fast energy boost" />
+                </label>
+
+                <button class="primary-button full" type="submit">Save food item</button>
+              </form>
+              <div id="food-status" class="status" aria-live="polite"></div>
+            </section>
+
+            <section class="panel content-card">
+              <h3>Get in touch submissions</h3>
+              <div id="contact-list" class="contact-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

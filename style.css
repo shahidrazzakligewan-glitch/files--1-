@@ -749,11 +749,13 @@ button {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 17, 12, 0.35);
+  background: rgba(15, 18, 16, 0.48);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.22s ease;
   z-index: 20;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .drawer-backdrop.is-open {
@@ -766,51 +768,147 @@ button {
   top: 0;
   right: 0;
   height: 100%;
-  width: min(420px, 100%);
-  background: var(--card);
-  border-left: 2px solid var(--ink);
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
+  width: min(440px, 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(244,241,234,0.92));
+  border-left: 1px solid var(--line-strong);
+  transform: translateX(102%);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 21;
   overflow-y: auto;
-  padding: 2rem 1.6rem;
+  padding: 1.6rem 1.4rem 2rem;
+  box-shadow: -20px 0 40px rgba(18, 28, 22, 0.12);
+}
+
+html[data-theme="dark"] .drawer {
+  background: linear-gradient(180deg, rgba(15, 22, 29, 0.9), rgba(20, 31, 38, 0.94));
 }
 
 .drawer.is-open { transform: translateX(0); }
 
 .drawer__close {
   position: absolute;
-  top: 1rem;
-  right: 1.2rem;
-  background: none;
-  border: none;
-  font-size: 1.8rem;
+  top: 0.9rem;
+  right: 1rem;
+  background: rgba(255,255,255,0.22);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.6rem;
   line-height: 1;
   color: var(--ink-soft);
 }
 
 .drawer__close:hover { color: var(--ink); }
 
-.drawer__emoji { font-size: 2.8rem; }
+.drawer__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.drawer__badge {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 1rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(255, 157, 43, 0.2), rgba(124, 58, 237, 0.12));
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  font-size: 2rem;
+}
+
+.drawer__motion-toggle {
+  border: 1px solid var(--line-strong);
+  background: rgba(255,255,255,0.08);
+  color: var(--ink);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.drawer__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.drawer__pill {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(226, 121, 12, 0.12);
+  color: var(--forest-deep);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
 
 .drawer__name {
-  font-size: 1.9rem;
+  font-size: clamp(1.9rem, 2.8vw, 2.3rem);
   font-weight: 600;
+  margin: 0;
   color: var(--forest-deep);
-  margin-top: 0.4rem;
 }
 
 .drawer__desc {
   color: var(--ink-soft);
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0.6rem 0 1.4rem;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  margin: 0 0 1.2rem;
+}
+
+.drawer__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.drawer__stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+  padding: 0.8rem 0.7rem;
+}
+
+.drawer__stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.drawer__stat-card strong {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--forest-deep);
+}
+
+.drawer__stat-card small {
+  color: var(--ink-soft);
+  font-size: 0.7rem;
 }
 
 .drawer__section-title {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--ink-soft);
-  margin: 1.5rem 0 0.6rem;
+  margin: 1.4rem 0 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .macro-row {
@@ -823,17 +921,21 @@ button {
 }
 
 .macro-row .bar-track {
-  background: var(--line);
+  background: rgba(22, 35, 30, 0.08);
   height: 8px;
+  border-radius: 99px;
+  overflow: hidden;
 }
 
 .macro-row .bar-fill {
   height: 100%;
-  background: var(--forest);
+  display: block;
+  background: linear-gradient(90deg, var(--forest), #7ea58c);
+  border-radius: inherit;
 }
 
-.macro-row .bar-fill.is-sugar { background: var(--citrus); }
-.macro-row .bar-fill.is-fat { background: var(--berry); }
+.macro-row .bar-fill.is-sugar { background: linear-gradient(90deg, var(--citrus), #f4bd6a); }
+.macro-row .bar-fill.is-fat { background: linear-gradient(90deg, var(--berry), #d78b9a); }
 
 .stat-line {
   display: flex;
@@ -849,18 +951,27 @@ button {
 .benefits { list-style: none; margin: 0.6rem 0 0; padding: 0; }
 
 .benefits li {
-  padding: 0.4rem 0;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--line);
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .benefits li::before {
-  content: "—";
+  content: "•";
   color: var(--citrus);
   flex-shrink: 0;
+}
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* ---------------------------------------------------------
@@ -1452,6 +1563,154 @@ html[data-theme="dark"] .contact {
 }
 
 .contact__note span { color: var(--citrus); }
+
+.nutrition-plan {
+  --plan-teal: #2b7168;
+  --plan-coral: #c65a4b;
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 3.5rem max(1.25rem, calc((100% - 1160px) / 2));
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 90% 8%, rgba(226, 121, 12, 0.13), transparent 28%),
+    linear-gradient(112deg, rgba(43, 113, 104, 0.12), rgba(43, 113, 104, 0.025) 62%, transparent);
+}
+
+.nutrition-plan__intro { position: relative; max-width: 650px; margin-bottom: 1.5rem; }
+.nutrition-plan__intro h2 { color: var(--forest-deep); font-size: 2.35rem; line-height: 1.08; }
+.nutrition-plan__intro > p:last-child { max-width: 58ch; color: var(--ink-soft); line-height: 1.6; }
+
+.nutrition-plan__form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 1.15rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.nutrition-plan__form:focus-within { border-color: var(--citrus); box-shadow: 0 14px 34px rgba(25, 54, 37, 0.1), var(--focus-ring); }
+
+.nutrition-plan__field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; }
+.nutrition-plan__field input,
+.nutrition-plan__field select {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line-strong); border-radius: 6px; background: var(--glass-strong);
+  color: var(--ink); font: 400 0.88rem var(--body);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.nutrition-plan__field input:focus,
+.nutrition-plan__field select:focus { border-color: var(--plan-teal); box-shadow: 0 0 0 3px rgba(43, 113, 104, 0.15); outline: none; }
+
+.nutrition-plan__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; grid-column: 1 / -1; }
+.nutrition-plan__actions .primary-button { min-height: 46px; padding: 0.7rem 1.15rem; cursor: pointer; background: var(--plan-teal); border-color: var(--plan-teal); transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.nutrition-plan__actions .primary-button:hover { transform: translateY(-2px); background: var(--forest-deep); box-shadow: 0 10px 22px rgba(20, 65, 56, 0.2); }
+.nutrition-plan__clear { min-height: 42px; border: 0; background: transparent; color: var(--ink-soft); font: 600 0.82rem var(--body); text-decoration: underline; text-underline-offset: 3px; }
+.nutrition-plan__disclaimer,
+.nutrition-plan__fineprint { margin: 0.85rem 0 0; color: var(--ink-soft); font-size: 0.76rem; line-height: 1.55; }
+.nutrition-plan__loading,
+.nutrition-plan__error { color: var(--ink-soft); }
+.nutrition-plan__error { color: var(--berry); }
+
+.nutrition-plan__results { margin-top: 1.5rem; }
+.nutrition-plan__results.is-ready .nutrition-plan__summary { animation: nutrition-summary-enter 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.nutrition-plan__loading { animation: nutrition-loading-pulse 1.2s ease-in-out infinite alternate; }
+.nutrition-plan__summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 1.35rem; border: 1px solid rgba(43, 113, 104, 0.28); border-left: 5px solid var(--plan-teal);
+  border-radius: 8px; background: linear-gradient(110deg, rgba(43, 113, 104, 0.11), rgba(255, 255, 255, 0.3) 56%, rgba(226, 121, 12, 0.06));
+}
+.nutrition-plan__summary h3 { color: var(--forest-deep); font-size: 1.8rem; }
+.nutrition-plan__summary h3 span { font: 600 0.8rem var(--body); color: var(--ink-soft); }
+.nutrition-plan__summary p:last-child { margin-bottom: 0; color: var(--ink-soft); font-size: 0.88rem; line-height: 1.5; }
+.nutrition-plan__eyebrow { margin: 0 0 0.45rem; color: var(--plan-coral); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.nutrition-plan__bmi { display: grid; gap: 0.2rem; min-width: 96px; padding: 0.65rem 0.8rem; border: 1px solid rgba(43, 113, 104, 0.2); border-radius: 7px; background: rgba(255, 255, 255, 0.38); text-align: right; color: var(--ink-soft); font-size: 0.75rem; }
+.nutrition-plan__bmi strong { color: var(--plan-teal); font-size: 1.65rem; }
+.nutrition-plan__picks-title { margin: 1.5rem 0 0.8rem; color: var(--forest-deep); font-size: 1.35rem; }
+.nutrition-plan__picks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+.nutrition-pick {
+  display: flex; min-width: 0; flex-direction: column; gap: 0.48rem; padding: 0.9rem;
+  border: 1px solid var(--line); border-left: 4px solid var(--pick-accent, var(--citrus)); border-radius: 8px;
+  background: linear-gradient(145deg, var(--glass-strong), var(--glass)); color: var(--ink); text-align: left; cursor: pointer;
+  opacity: 0;
+  animation: nutrition-pick-enter 420ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--pick-index, 0) * 24ms);
+  transition: translate 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+.nutrition-pick:hover { translate: 0 -3px; border-color: var(--plan-teal); background: var(--glass-strong); box-shadow: 0 12px 26px rgba(25, 54, 37, 0.11); }
+.nutrition-pick__top { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; color: var(--ink-soft); font-size: 0.67rem; }
+.nutrition-pick__top span:first-child { font-size: 1.35rem; }
+.nutrition-pick strong { color: var(--forest-deep); font: 600 1.2rem var(--display); }
+.nutrition-pick__cal { font-size: 0.78rem; font-weight: 700; }
+.nutrition-pick__reason { color: var(--ink-soft); font-size: 0.75rem; line-height: 1.4; }
+.nutrition-plan__more-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; color: var(--ink-soft); font-size: 0.78rem; }
+.nutrition-plan__more { min-height: 40px; padding: 0.45rem 0.85rem; border: 1px solid rgba(43, 113, 104, 0.45); border-radius: 6px; background: var(--glass-strong); color: var(--plan-teal); font: 600 0.82rem var(--body); transition: translate 160ms ease, border-color 160ms ease, background-color 160ms ease; }
+.nutrition-plan__more:hover { translate: 0 -1px; border-color: var(--plan-teal); background: rgba(43, 113, 104, 0.08); }
+
+@keyframes nutrition-pick-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nutrition-summary-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nutrition-loading-pulse {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+html[data-theme="dark"] .nutrition-plan__summary,
+html[data-theme="dark"] .nutrition-pick { background: var(--glass-strong); }
+
+html[data-theme="dark"] .nutrition-plan {
+  --plan-teal: #7dc4ad;
+  --plan-coral: #f09a7c;
+  background:
+    radial-gradient(ellipse at 90% 8%, rgba(240, 154, 124, 0.12), transparent 28%),
+    linear-gradient(112deg, rgba(67, 136, 119, 0.16), rgba(67, 136, 119, 0.035) 62%, transparent);
+}
+
+html[data-theme="dark"] .nutrition-plan__summary { background: linear-gradient(110deg, rgba(67, 136, 119, 0.19), rgba(255, 255, 255, 0.035) 60%, rgba(240, 154, 124, 0.07)); }
+html[data-theme="dark"] .nutrition-plan__bmi { background: rgba(255, 255, 255, 0.05); }
+
+@media (max-width: 760px) {
+  .nutrition-plan { width: 100%; padding: 2.5rem 1rem; }
+  .nutrition-plan__form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nutrition-plan__picks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .nutrition-plan { width: 100%; padding: 2.3rem 0.75rem; }
+  .nutrition-plan__intro h2 { font-size: 1.85rem; }
+  .nutrition-plan__form { gap: 0.7rem; padding: 0.8rem; }
+  .nutrition-plan__field { font-size: 0.73rem; }
+  .nutrition-plan__field input, .nutrition-plan__field select { font-size: 0.78rem; }
+  .nutrition-plan__picks { grid-template-columns: 1fr; }
+  .nutrition-plan__summary { align-items: flex-start; padding: 1rem; }
+  .nutrition-plan__summary h3 { font-size: 1.35rem; }
+  .nutrition-plan__more-row { align-items: flex-start; flex-direction: column; gap: 0.55rem; }
+}
+
+html[data-motion="reduced"] .nutrition-pick,
+html[data-motion="reduced"] .nutrition-plan__results.is-ready .nutrition-plan__summary,
+html[data-motion="reduced"] .nutrition-plan__loading { animation: none; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nutrition-pick,
+  .nutrition-plan__results.is-ready .nutrition-plan__summary,
+  .nutrition-plan__loading { animation: none; opacity: 1; }
+}
 
 .contact__form {
   display: grid;

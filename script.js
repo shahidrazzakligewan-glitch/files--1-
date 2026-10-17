@@ -19,6 +19,8 @@ const authPanels = document.querySelectorAll(".auth-panel");
 const authMessage = document.getElementById("auth-message");
 const loginForm = document.getElementById("login-form");
 const signupForm = document.getElementById("signup-form");
+const nutritionProfileForm = document.getElementById("nutrition-profile-form");
+const nutritionPlanResults = document.getElementById("nutrition-plan-results");
 
 let activeType = "all";
 let currentQuery = "";
@@ -60,11 +62,213 @@ function initFoodApp() {
     if (e.key === "Escape") closeDrawer();
   });
 
+  document.querySelectorAll("[data-motion-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextMode = document.documentElement.dataset.motion === "reduced" ? "full" : "reduced";
+      setMotionMode(nextMode);
+    });
+  });
+
+  updateMotionToggle();
+
   if (contactForm) {
     contactForm.addEventListener("submit", handleContactSubmit);
   }
 
+  initNutritionPlanner();
+
   initContactReveal();
+}
+
+const NUTRITION_PROFILE_KEY = "calorieCountNutritionProfile";
+
+function initNutritionPlanner() {
+  if (!nutritionProfileForm || !nutritionPlanResults) return;
+
+  const savedProfile = getNutritionProfile();
+  if (savedProfile) {
+    Object.entries(savedProfile).forEach(([key, value]) => {
+      const field = nutritionProfileForm.elements.namedItem(key);
+      if (field) field.value = value;
+    });
+    showNutritionPlan(savedProfile);
+  }
+
+  nutritionProfileForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!nutritionProfileForm.reportValidity()) return;
+
+    const formData = new FormData(nutritionProfileForm);
+    const profile = Object.fromEntries(formData.entries());
+    profile.age = Number(profile.age);
+    profile.height = Number(profile.height);
+    profile.weight = Number(profile.weight);
+    profile.activity = Number(profile.activity);
+    localStorage.setItem(NUTRITION_PROFILE_KEY, JSON.stringify(profile));
+    await showNutritionPlan(profile);
+  });
+
+  document.getElementById("clear-nutrition-profile")?.addEventListener("click", () => {
+    localStorage.removeItem(NUTRITION_PROFILE_KEY);
+    nutritionProfileForm.reset();
+    nutritionPlanResults.hidden = true;
+    nutritionPlanResults.innerHTML = "";
+  });
+}
+
+function getNutritionProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(NUTRITION_PROFILE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+async function showNutritionPlan(profile) {
+  nutritionPlanResults.classList.remove("is-ready");
+  nutritionPlanResults.hidden = false;
+  nutritionPlanResults.innerHTML = '<p class="nutrition-plan__loading">Finding food ideas for your profile…</p>';
+
+  try {
+    const response = await fetch("/foods.json");
+    if (!response.ok) throw new Error("Could not load food recommendations.");
+    const data = await response.json();
+
+    const bmr = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age +
+      (profile.sex === "male" ? 5 : profile.sex === "female" ? -161 : -78);
+    const maintenanceCalories = Math.round(bmr * profile.activity);
+    const bmi = profile.weight / ((profile.height / 100) ** 2);
+    const goalLabels = {
+      lose: "gradual weight loss",
+      gain: "gradual weight gain",
+      maintain: "weight maintenance",
+      protein: "higher-protein choices",
+      fiber: "higher-fiber choices",
+      "low-sugar": "lower-sugar choices",
+    };
+
+    if (profile.goal === "lose" && bmi < 18.5) {
+      nutritionPlanResults.innerHTML = `
+        <div class="nutrition-plan__summary">
+          <p class="nutrition-plan__eyebrow">Personalized estimate</p>
+          <h3>Let's choose a different goal</h3>
+          <p>Your entered height and weight produce a BMI below 18.5. This tool won't suggest weight loss for that profile. Consider discussing goals with a qualified health professional.</p>
+        </div>`;
+      return;
+    }
+
+    const targetCalories = Math.round(maintenanceCalories + (profile.goal === "lose" ? -300 : profile.goal === "gain" ? 250 : 0));
+    const preferenceTypes = {
+      plant: ["fruit", "vegetable", "dryfruit"],
+      fruit: ["fruit"],
+      vegetable: ["vegetable"],
+      dryfruit: ["dryfruit"],
+      meat: ["meat"],
+      snack: ["snack"],
+      fastfood: ["fastfood"],
+    };
+    const allowedTypes = preferenceTypes[profile.preference];
+    const eligibleFoods = (Array.isArray(data) ? data : []).filter((food) =>
+      !allowedTypes || allowedTypes.includes(food.type)
+    );
+    const scoredFoods = eligibleFoods.map((food) => ({ ...food, score: scoreRecommendation(food, profile.goal) }));
+    scoredFoods.sort((first, second) => second.score - first.score);
+    const initialCount = Math.min(12, scoredFoods.length);
+    const goalText = goalLabels[profile.goal] || goalLabels.maintain;
+    const planNote = ["protein", "fiber", "low-sugar"].includes(profile.goal)
+      ? "Daily energy stays at your maintenance estimate; food ideas are ranked by your selected nutrition focus."
+      : "This is a starting estimate, not a prescribed intake.";
+    nutritionPlanResults.innerHTML = `
+      <div class="nutrition-plan__summary">
+        <div>
+          <p class="nutrition-plan__eyebrow">Your direction · ${goalText}</p>
+          <h3>${targetCalories.toLocaleString()} <span>estimated kcal / day</span></h3>
+          <p>Estimated maintenance: ${maintenanceCalories.toLocaleString()} kcal/day. ${planNote}</p>
+        </div>
+        <div class="nutrition-plan__bmi"><span>Profile BMI</span><strong>${bmi.toFixed(1)}</strong></div>
+      </div>
+      <h3 class="nutrition-plan__picks-title">Food ideas for you</h3>
+      <div class="nutrition-plan__picks" id="nutrition-plan-picks"></div>
+      <div class="nutrition-plan__more-row">
+        <span id="nutrition-plan-count" aria-live="polite"></span>
+        <button class="nutrition-plan__more" id="nutrition-plan-more" type="button">Show more foods</button>
+      </div>
+      <p class="nutrition-plan__fineprint">Food ideas are ranked from the available dataset; they are not a meal plan. Portions and total intake depend on your full diet and needs.</p>`;
+
+    nutritionPlanResults.classList.add("is-ready");
+    let visibleCount = initialCount;
+    let renderedCount = 0;
+    const picksContainer = document.getElementById("nutrition-plan-picks");
+    const moreButton = document.getElementById("nutrition-plan-more");
+    const countLabel = document.getElementById("nutrition-plan-count");
+    const renderVisibleFoods = () => {
+      renderNutritionPicks(picksContainer, scoredFoods.slice(renderedCount, visibleCount), profile.goal);
+      renderedCount = visibleCount;
+      countLabel.textContent = `Showing ${visibleCount} of ${scoredFoods.length} matching foods`;
+      moreButton.hidden = visibleCount >= scoredFoods.length;
+    };
+
+    renderVisibleFoods();
+    moreButton.addEventListener("click", () => {
+      visibleCount = Math.min(visibleCount + 12, scoredFoods.length);
+      renderVisibleFoods();
+    });
+  } catch (error) {
+    nutritionPlanResults.innerHTML = `<p class="nutrition-plan__error">${error.message || "Could not create suggestions. Please try again."}</p>`;
+  }
+}
+
+function scoreRecommendation(food, goal) {
+  const calories = Number(food.caloriesPer100g) || 0;
+  const protein = Number(food.protein) || 0;
+  const fiber = Number(food.fiber) || 0;
+  if (goal === "lose") return (fiber * 3) + (protein * 2) - (calories * 0.04);
+  if (goal === "gain") return (calories * 0.06) + (protein * 3) + (fiber * 0.4);
+  if (goal === "protein") return (protein * 4) + (fiber * 0.35) - (calories * 0.005);
+  if (goal === "fiber") return (fiber * 4) + (protein * 0.25) - (calories * 0.002);
+  if (goal === "low-sugar") return -((Number(food.sugar) || 0) * 3) + (fiber * 0.8) + (protein * 0.3);
+  return (protein * 2) + (fiber * 2) - (Math.abs(calories - 100) * 0.015);
+}
+
+function recommendationReason(food, goal) {
+  const calories = Number(food.caloriesPer100g) || 0;
+  const protein = Number(food.protein) || 0;
+  const fiber = Number(food.fiber) || 0;
+  const water = Number(food.water) || 0;
+  const sugar = Number(food.sugar) || 0;
+
+  if (goal === "protein") return `${protein}g protein per 100g; ranked for protein content.`;
+  if (goal === "fiber") return `${fiber}g fiber per 100g; ranked for fiber content.`;
+  if (goal === "low-sugar") return `${sugar}g sugar per 100g; lower-sugar foods rank higher.`;
+  if (goal === "lose") {
+    if (fiber >= 3) return "Higher fiber per 100g, with calories considered in the ranking.";
+    if (water >= 85) return "High water content and relatively few calories per 100g.";
+    return "Lower-calorie option to add variety to your food choices.";
+  }
+  if (goal === "gain") {
+    if (protein >= 8) return "Higher-protein option, ranked for gradual energy gain.";
+    if (calories >= 200) return "More energy-dense per 100g, useful when building a higher-energy meal.";
+    return "Adds energy and variety; combine with other foods for a full meal.";
+  }
+  if (protein >= 8 && fiber >= 3) return "Provides both protein and fiber per 100g.";
+  if (fiber >= 3) return "Higher fiber per 100g, among your selected food types.";
+  if (protein >= 5) return "A higher-protein option among your selected food types.";
+  return calories <= 100 ? "A moderate-energy choice among your selected food types." : "An energy-rich choice for a varied diet.";
+}
+
+function renderNutritionPicks(container, foods, goal) {
+  if (!foods.length) return;
+  container.insertAdjacentHTML("beforeend", foods.map((food, index) => `
+    <button class="nutrition-pick" type="button" data-food-id="${food.id}" style="--pick-accent:${food.color || "var(--citrus)"};--pick-index:${index}">
+      <span class="nutrition-pick__top"><span>${food.emoji || "🍽️"}</span><span>${TYPE_LABELS[food.type] || capitalize(food.type)}</span></span>
+      <strong>${food.name}</strong>
+      <span class="nutrition-pick__cal">${food.caloriesPer100g} kcal / 100g</span>
+      <span class="nutrition-pick__reason">${recommendationReason(food, goal)}</span>
+    </button>`).join(""));
+
+  [...container.querySelectorAll("[data-food-id]")].slice(-foods.length).forEach((button) => {
+    button.addEventListener("click", () => openDrawer(button.dataset.foodId));
+  });
 }
 
 function initContactReveal() {
@@ -132,6 +336,7 @@ function initHeaderAuth() {
 const AUTH_USERS_KEY = "calorieCountUsers";
 const CURRENT_USER_KEY = "calorieCountCurrentUser";
 const THEME_STORAGE_KEY = "calorieCountTheme";
+const MOTION_STORAGE_KEY = "calorieCountMotion";
 
 initTheme();
 initHeaderAuth();
@@ -139,7 +344,11 @@ initHeaderAuth();
 function initTheme() {
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
   const theme = savedTheme === "dark" ? "dark" : "light";
+  const savedMotion = localStorage.getItem(MOTION_STORAGE_KEY);
+  const motion = savedMotion === "reduced" ? "reduced" : "full";
+
   document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.motion = motion;
 
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -161,6 +370,22 @@ function initTheme() {
       });
     });
   });
+}
+
+function updateMotionToggle() {
+  const motionIsReduced = document.documentElement.dataset.motion === "reduced";
+  document.querySelectorAll("[data-motion-toggle]").forEach((button) => {
+    const label = button.querySelector(".motion-toggle__label");
+    if (label) label.textContent = motionIsReduced ? "Animation: Off" : "Animation: On";
+    button.setAttribute("aria-pressed", String(motionIsReduced));
+  });
+}
+
+function setMotionMode(mode) {
+  const normalizedMode = mode === "reduced" ? "reduced" : "full";
+  document.documentElement.dataset.motion = normalizedMode;
+  localStorage.setItem(MOTION_STORAGE_KEY, normalizedMode);
+  updateMotionToggle();
 }
 
 function getStoredUsers() {
@@ -453,6 +678,15 @@ async function openDrawer(id) {
     if (!res.ok) throw new Error("not found");
     const f = await parseJsonResponse(res, "Could not load food details.");
     drawerContent.innerHTML = buildDrawerHTML(f);
+    const motionToggle = document.getElementById("drawer-motion-toggle");
+    if (motionToggle) {
+      motionToggle.addEventListener("click", () => {
+        const nextMode = document.documentElement.dataset.motion === "reduced" ? "full" : "reduced";
+        setMotionMode(nextMode);
+        const label = motionToggle.querySelector(".motion-toggle__label");
+        if (label) label.textContent = nextMode === "reduced" ? "Animation: Off" : "Animation: On";
+      });
+    }
     drawer.classList.add("is-open");
     drawerBackdrop.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
@@ -480,10 +714,34 @@ function buildDrawerHTML(f) {
     </div>
   `;
 
+  const motionButtonLabel = document.documentElement.dataset.motion === "reduced" ? "Animation: Off" : "Animation: On";
+
   return `
-    <span class="drawer__emoji">${f.emoji || "🍽️"}</span>
-    <h2 class="drawer__name">${f.name}</h2>
+    <div class="drawer__topbar">
+      <div class="drawer__badge">${f.emoji || "🍽️"}</div>
+      <button id="drawer-motion-toggle" class="drawer__motion-toggle" type="button" data-motion-toggle aria-pressed="${document.documentElement.dataset.motion === "reduced"}">
+        <span class="motion-toggle__label">${motionButtonLabel}</span>
+      </button>
+    </div>
+
+    <div class="drawer__headline">
+      <span class="drawer__pill">${TYPE_LABELS[f.type] || capitalize(f.type)}</span>
+      <h2 class="drawer__name">${f.name}</h2>
+    </div>
     <p class="drawer__desc">${f.description || ""}</p>
+
+    <div class="drawer__stats-grid">
+      <div class="drawer__stat-card">
+        <span class="drawer__stat-label">Calories</span>
+        <strong>${f.caloriesPer100g}</strong>
+        <small>kcal / 100g</small>
+      </div>
+      <div class="drawer__stat-card">
+        <span class="drawer__stat-label">Serving</span>
+        <strong>${f.caloriesPerServing}</strong>
+        <small>${f.servingSize || "1 serving"}</small>
+      </div>
+    </div>
 
     <p class="drawer__section-title">Per 100g</p>
     ${macroRow("Protein", f.protein, "g", "protein")}
